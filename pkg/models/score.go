@@ -1,12 +1,15 @@
 package models
 
-import "gorm.io/gorm"
+import "time"
 
 type Score struct {
-	gorm.Model
-	Answer1    float32
-	Answer2    float32
-	Answer3    float32
-	ExamineeID uint
-	UserID     uint
+	ID         uint      `gorm:"primarykey" json:"-"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Answer1    float32   `json:"answer1"`
+	Answer2    float32   `json:"answer2"`
+	Answer3    float32   `json:"answer3"`
+	ExamineeID uint      `json:"-"`
+	UserID     uint      `json:"-"`
+	User       User      `json:"user"`
 }

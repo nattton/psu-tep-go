@@ -66,6 +66,40 @@ func (h *Handler) saveQuizHandler(c *gin.Context) {
 	c.AbortWithStatus(http.StatusNotModified)
 }
 
+func (h *Handler) listExamineeByAdminHandler(c *gin.Context) {
+	userClaim, _ := h.decodeToken(c)
+	var user models.User
+
+	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+		c.AbortWithStatus(http.StatusNotModified)
+		return
+	}
+
+	var examinees []models.Examinee
+	h.db.Preload("Scores.User").Preload("Scores").Find(&examinees)
+	c.JSON(http.StatusOK, gin.H{
+		"store_path": getCurrentPath(c),
+		"examinees":  examinees,
+	})
+}
+
+func (h *Handler) listExamineeByRaterHandler(c *gin.Context) {
+	userClaim, _ := h.decodeToken(c)
+	var user models.User
+
+	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+		c.AbortWithStatus(http.StatusNotModified)
+		return
+	}
+
+	var examinees []models.Examinee
+	h.db.Preload("Scores.User").Preload("Scores", "user_id = ?", user.ID).Find(&examinees)
+	c.JSON(http.StatusOK, gin.H{
+		"store_path": getCurrentPath(c),
+		"examinees":  examinees,
+	})
+}
+
 func (h *Handler) rateExamineeHandler(c *gin.Context) {
 	var form forms.Score
 	if err := c.ShouldBindJSON(&form); err != nil {

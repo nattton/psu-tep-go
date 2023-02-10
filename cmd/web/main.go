@@ -45,9 +45,11 @@ func main() {
 	apiAdminProtected.GET("/users", handler.listUserHandler)
 	apiAdminProtected.PATCH("/user/:id", handler.updateUserHandler)
 	apiAdminProtected.PATCH("/quiz", handler.saveQuizHandler)
+	apiAdminProtected.GET("/admin/examinees", handler.listExamineeByAdminHandler)
 
 	apiRaterProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationRaterMiddleware)
-	apiRaterProtected.POST("/rate/:examiner_id", handler.rateExamineeHandler)
+	apiRaterProtected.GET("/rater/examinees", handler.listExamineeByRaterHandler)
+	apiRaterProtected.POST("/rater/:examiner_id", handler.rateExamineeHandler)
 
 	apiUserProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationUserMiddleware)
 	apiUserProtected.GET("/examinees", handler.listExamineeHandler)
