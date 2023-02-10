@@ -178,11 +178,11 @@ func (h *Handler) sendAnswerHandler(c *gin.Context) {
 			c.JSON(http.StatusCreated, gin.H{
 				"message": "save file",
 			})
-
+			return
 		} else {
 			println("answer" + seq + " not found")
 		}
 	}
 
-	c.AbortWithStatus(http.StatusNotModified)
+	// c.AbortWithStatus(http.StatusNotModified)
 }

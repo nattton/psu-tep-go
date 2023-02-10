@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	examDir   = "exam"
+	quizDir   = "quiz"
 	answerDir = "answer"
 )
 
@@ -28,7 +28,7 @@ func main() {
 	}
 	handler := newHandler(db, *signedString, *storePath)
 
-	db.AutoMigrate(&models.User{}, &models.Exam{}, &models.Examinee{}, &models.Score{})
+	db.AutoMigrate(&models.User{}, &models.Quiz{}, &models.Examinee{}, &models.Score{})
 
 	handler.initUser()
 
@@ -44,6 +44,7 @@ func main() {
 	apiAdminProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationAdminMiddleware)
 	apiAdminProtected.GET("/users", handler.listUserHandler)
 	apiAdminProtected.PATCH("/user/:id", handler.updateUserHandler)
+	apiAdminProtected.PATCH("/quiz", handler.saveQuizHandler)
 
 	apiRaterProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationRaterMiddleware)
 	apiRaterProtected.POST("/rate/:examiner_id", handler.rateExamineeHandler)
@@ -56,11 +57,11 @@ func main() {
 	apiProtected.POST("/examinee", handler.createExamineeHandler)
 	apiProtected.PATCH("/examinee/:id", handler.updateExamineeHandler)
 
-	apiProtected.GET("/exam", handler.getExamHandler)
+	apiProtected.GET("/quiz", handler.getQuizHandler)
 	apiProtected.POST("/answer", handler.sendAnswerHandler)
 
 	r.Static("/index", *frontPath)
-	r.Static("/exam", *storePath+"/"+examDir)
+	r.Static("/quiz", *storePath+"/"+quizDir)
 	r.Static("/answers", *storePath+"/"+answerDir)
 	r.Run(*addr)
 }

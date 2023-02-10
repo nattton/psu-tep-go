@@ -1,7 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gitlab.com/code-mobi/psu-tep/pkg/forms"
@@ -9,15 +13,57 @@ import (
 	"gorm.io/gorm"
 )
 
-func (h *Handler) getExamHandler(c *gin.Context) {
-	var exam models.Exam
-	h.db.First(&exam)
+func (h *Handler) getQuizHandler(c *gin.Context) {
+	var quiz models.Quiz
+	h.db.First(&quiz)
 	currentPath := getCurrentPath(c)
 	c.JSON(http.StatusOK, gin.H{
-		"prop1": currentPath + exam.Prop1,
-		"prop2": currentPath + exam.Prop2,
-		"prop3": currentPath + exam.Prop3,
+		"quiz1": currentPath + quiz.Quiz1,
+		"quiz2": currentPath + quiz.Quiz2,
+		"quiz3": currentPath + quiz.Quiz3,
 	})
+}
+
+func (h *Handler) saveQuizHandler(c *gin.Context) {
+	claims, _ := h.decodeToken(c)
+	if claims.Role != "admin" {
+		c.JSON((http.StatusUnauthorized), gin.H{
+			"error": claims.Role + " unauthorized this function.",
+		})
+		return
+	}
+
+	println("ID", claims.ID)
+	println("Role", claims.Role)
+	var quiz models.Quiz
+	h.db.First(&quiz)
+
+	quizPath := fmt.Sprintf("/%s/", quizDir)
+	if err := os.MkdirAll(h.storePath+quizPath, os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 1; i < 4; i++ {
+		seq := fmt.Sprint(i)
+		file, err := c.FormFile("quiz" + seq)
+		if err == nil {
+			filename := fmt.Sprintf("%s_%d_%s", seq, time.Now().Unix(), file.Filename)
+			if err := c.SaveUploadedFile(file, h.storePath+quizPath+filename); err != nil {
+				log.Fatal(err)
+			}
+
+			h.db.Model(&quiz).Update("quiz"+seq, quizPath+filename)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "save file",
+			})
+			return
+		} else {
+			println("quiz" + seq + " not found")
+		}
+	}
+
+	c.AbortWithStatus(http.StatusNotModified)
 }
 
 func (h *Handler) rateExamineeHandler(c *gin.Context) {
