@@ -49,7 +49,7 @@ func main() {
 
 	apiRaterProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationRaterMiddleware)
 	apiRaterProtected.GET("/rater/examinees", handler.listExamineeByRaterHandler)
-	apiRaterProtected.POST("/rater/:examiner_id", handler.rateExamineeHandler)
+	apiRaterProtected.POST("/rater/score", handler.rateExamineeHandler)
 
 	apiUserProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationUserMiddleware)
 	apiUserProtected.GET("/examinees", handler.listExamineeHandler)
@@ -63,7 +63,7 @@ func main() {
 	apiProtected.POST("/answer", handler.sendAnswerHandler)
 
 	r.Static("/index", *frontPath)
-	r.Static("/quiz", *storePath+"/"+quizDir)
-	r.Static("/answers", *storePath+"/"+answerDir)
+	r.Static("/"+quizDir, *storePath+"/"+quizDir)
+	r.Static("/"+answerDir, *storePath+"/"+answerDir)
 	r.Run(*addr)
 }

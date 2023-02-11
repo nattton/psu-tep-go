@@ -64,10 +64,39 @@ func (h *Handler) loginExamineeHandler(c *gin.Context) {
 func (h *Handler) listExamineeHandler(c *gin.Context) {
 	var examinees []models.Examinee
 	h.db.Order("code").Find(&examinees)
+	for i := 0; i < len(examinees); i++ {
+		examinees[i] = addPathToAnswer(c, examinees[i])
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"store_path": getCurrentPath(c),
-		"examinees":  examinees,
+		"examinees": examinees,
 	})
+}
+
+func addPathToAnswer(c *gin.Context, ex models.Examinee) models.Examinee {
+	ans1, ans2, ans3 := "", "", ""
+	currentPath := getCurrentPath(c)
+	if ex.Answer1 != "" {
+		ans1 = currentPath + ex.Answer1
+	}
+	if ex.Answer2 != "" {
+		ans2 = currentPath + ex.Answer2
+	}
+	if ex.Answer3 != "" {
+		ans3 = currentPath + ex.Answer3
+	}
+
+	res := models.Examinee{
+		ID:        ex.ID,
+		Code:      ex.Code,
+		Firstname: ex.Firstname,
+		Lastname:  ex.Lastname,
+		Answer1:   ans1,
+		Answer2:   ans2,
+		Answer3:   ans3,
+		Finish:    ex.Finish,
+		Scores:    ex.Scores,
+	}
+	return res
 }
 
 func (h *Handler) getExamineeHandler(c *gin.Context) {
@@ -79,8 +108,7 @@ func (h *Handler) getExamineeHandler(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"store_path": getCurrentPath(c),
-		"examinee":   examinee,
+		"examinee": addPathToAnswer(c, examinee),
 	})
 }
 

@@ -77,9 +77,11 @@ func (h *Handler) listExamineeByAdminHandler(c *gin.Context) {
 
 	var examinees []models.Examinee
 	h.db.Preload("Scores.User").Preload("Scores").Find(&examinees)
+	for i := 0; i < len(examinees); i++ {
+		examinees[i] = addPathToAnswer(c, examinees[i])
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"store_path": getCurrentPath(c),
-		"examinees":  examinees,
+		"examinees": examinees,
 	})
 }
 
@@ -94,9 +96,11 @@ func (h *Handler) listExamineeByRaterHandler(c *gin.Context) {
 
 	var examinees []models.Examinee
 	h.db.Preload("Scores.User").Preload("Scores", "user_id = ?", user.ID).Find(&examinees)
+	for i := 0; i < len(examinees); i++ {
+		examinees[i] = addPathToAnswer(c, examinees[i])
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"store_path": getCurrentPath(c),
-		"examinees":  examinees,
+		"examinees": examinees,
 	})
 }
 
@@ -109,18 +113,17 @@ func (h *Handler) rateExamineeHandler(c *gin.Context) {
 		return
 	}
 
-	examineeID := c.Param("examinee_id")
 	userClaim, _ := h.decodeToken(c)
 
 	var examinee models.Examinee
 	var user models.User
 
-	if err := h.db.Find(&examinee, examineeID).Error; err != nil {
+	if err := h.db.First(&examinee, form.ExamineeID).Error; err != nil {
 		c.AbortWithStatus(http.StatusNotModified)
 		return
 	}
 
-	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+	if err := h.db.First(&user, userClaim.ID).Error; err != nil {
 		c.AbortWithStatus(http.StatusNotModified)
 		return
 	}
@@ -134,7 +137,7 @@ func (h *Handler) rateExamineeHandler(c *gin.Context) {
 	score.Answer3 = form.Answer3
 	if result.Error == gorm.ErrRecordNotFound {
 		h.db.Create(&score)
-		c.JSON(http.StatusCreated, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "create score",
 		})
 		return
