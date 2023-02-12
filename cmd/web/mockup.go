@@ -8,7 +8,7 @@ func (h *Handler) initUser() {
 	if err != nil {
 		user.ID = 1
 		user.Name = "admin"
-		user.NewPassword = "12345678"
+		user.NewPassword = "admin@123"
 		user.Role = "admin"
 		h.db.Create(&user)
 
@@ -39,7 +39,7 @@ func (h *Handler) initUser() {
 func (h *Handler) mockUpExaminee() {
 	var examinee models.Examinee
 	examinee.Code = "11111"
-	examinee.Firstname = "ทดสอบ"
-	examinee.Lastname = "ระบบ"
+	examinee.Firstname = "test1"
+	examinee.Lastname = "test1"
 	h.db.Create(&examinee)
 }

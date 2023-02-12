@@ -46,6 +46,8 @@ func main() {
 	apiAdminProtected.PATCH("/user/:id", handler.updateUserHandler)
 	apiAdminProtected.PATCH("/quiz", handler.saveQuizHandler)
 	apiAdminProtected.GET("/admin/examinees", handler.listExamineeByAdminHandler)
+	apiAdminProtected.GET("/admin/scores", handler.exportScores)
+	apiAdminProtected.GET("/admin/answers", handler.downloadAnswers)
 
 	apiRaterProtected := r.Group("/api", handler.authorizationMiddleware, handler.authorizationRaterMiddleware)
 	apiRaterProtected.GET("/rater/examinees", handler.listExamineeByRaterHandler)

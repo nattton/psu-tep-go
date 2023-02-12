@@ -184,8 +184,7 @@ func (h *Handler) sendAnswerHandler(c *gin.Context) {
 	var examinee models.Examinee
 	h.db.First(&examinee, claims.ID)
 
-	answerPath := fmt.Sprintf("/%s/%s_%s/", answerDir, strconv.FormatUint(uint64(examinee.ID), 10), examinee.Code)
-	if err := os.MkdirAll(h.storePath+answerPath, os.ModePerm); err != nil {
+	if err := os.MkdirAll(h.storePath+"/"+answerDir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
@@ -193,12 +192,12 @@ func (h *Handler) sendAnswerHandler(c *gin.Context) {
 		seq := fmt.Sprint(i)
 		file, err := c.FormFile("answer" + seq)
 		if err == nil {
-			filename := examinee.Code + "_" + seq + "_" + file.Filename
-			if err := c.SaveUploadedFile(file, h.storePath+answerPath+filename); err != nil {
+			filePath := fmt.Sprintf("/%s/%s_%s_%s_%s", answerDir, strconv.FormatUint(uint64(examinee.ID), 10), examinee.Code, seq, file.Filename)
+			if err := c.SaveUploadedFile(file, h.storePath+filePath); err != nil {
 				log.Fatal(err)
 			}
 
-			h.db.Model(&examinee).Update("answer"+seq, answerPath+filename)
+			h.db.Model(&examinee).Update("answer"+seq, filePath)
 			if i == 3 {
 				h.db.Model(&examinee).Update("finish", true)
 			}

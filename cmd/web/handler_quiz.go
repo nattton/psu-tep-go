@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
 	"gitlab.com/code-mobi/psu-tep/pkg/forms"
 	"gitlab.com/code-mobi/psu-tep/pkg/models"
 	"gorm.io/gorm"
@@ -76,13 +77,71 @@ func (h *Handler) listExamineeByAdminHandler(c *gin.Context) {
 	}
 
 	var examinees []models.Examinee
-	h.db.Preload("Scores.User").Preload("Scores").Find(&examinees)
+	h.db.Preload("Scores.User").Preload("Scores", func(db *gorm.DB) *gorm.DB {
+		return db.Order("scores.user_id ASC")
+	}).Find(&examinees)
 	for i := 0; i < len(examinees); i++ {
 		examinees[i] = addPathToAnswer(c, examinees[i])
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"examinees": examinees,
 	})
+}
+
+func (h *Handler) exportScores(c *gin.Context) {
+	userClaim, _ := h.decodeToken(c)
+	var user models.User
+
+	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+		c.AbortWithStatus(http.StatusNotModified)
+		return
+	}
+
+	var examinees []models.Examinee
+	h.db.Preload("Scores.User").Preload("Scores", func(db *gorm.DB) *gorm.DB {
+		return db.Order("scores.user_id ASC")
+	}).Find(&examinees)
+	for i := 0; i < len(examinees); i++ {
+		examinees[i] = addPathToAnswer(c, examinees[i])
+	}
+
+	f := excelize.NewFile()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+	_, err := f.NewSheet("Sheet1")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	rowNum := 1
+	cell, err := excelize.CoordinatesToCellName(1, rowNum)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	f.SetSheetRow("Sheet1", cell, &[]interface{}{"Code", "Firstname", "Lastname", "Rate by", "Answer1", "Answer2", "Answer3", "Total"})
+
+	for _, ex := range examinees {
+		for _, score := range ex.Scores {
+			rowNum++
+			cell, err := excelize.CoordinatesToCellName(1, rowNum)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			sumScore := score.Answer1 + score.Answer2 + score.Answer3
+			f.SetSheetRow("Sheet1", cell, &[]interface{}{ex.Code, ex.Firstname, ex.Lastname, score.User.Name, score.Answer1, score.Answer2, score.Answer3, sumScore})
+		}
+	}
+
+	filePath := fmt.Sprintf("%s/%s/Score.xlsx", h.storePath, quizDir)
+	if err := f.SaveAs(filePath); err != nil {
+		fmt.Println(err)
+	}
+	c.File(filePath)
 }
 
 func (h *Handler) listExamineeByRaterHandler(c *gin.Context) {
@@ -150,4 +209,13 @@ func (h *Handler) rateExamineeHandler(c *gin.Context) {
 	}
 
 	c.AbortWithStatus(http.StatusNotModified)
+}
+
+func (h *Handler) downloadAnswers(c *gin.Context) {
+	filePath, err := zipAnswerWriter(h.storePath)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+
+	c.File(filePath)
 }
