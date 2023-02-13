@@ -71,7 +71,7 @@ func (h *Handler) listExamineeByAdminHandler(c *gin.Context) {
 	userClaim, _ := h.decodeToken(c)
 	var user models.User
 
-	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+	if err := h.db.First(&user, userClaim.ID).Error; err != nil {
 		c.AbortWithStatus(http.StatusNotModified)
 		return
 	}
@@ -92,7 +92,7 @@ func (h *Handler) exportScores(c *gin.Context) {
 	userClaim, _ := h.decodeToken(c)
 	var user models.User
 
-	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+	if err := h.db.First(&user, userClaim.ID).Error; err != nil {
 		c.AbortWithStatus(http.StatusNotModified)
 		return
 	}
@@ -148,7 +148,7 @@ func (h *Handler) listExamineeByRaterHandler(c *gin.Context) {
 	userClaim, _ := h.decodeToken(c)
 	var user models.User
 
-	if err := h.db.Find(&user, userClaim.ID).Error; err != nil {
+	if err := h.db.First(&user, userClaim.ID).Error; err != nil {
 		c.AbortWithStatus(http.StatusNotModified)
 		return
 	}

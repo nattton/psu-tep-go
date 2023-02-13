@@ -41,7 +41,44 @@ func (h *Handler) loginHandler(c *gin.Context) {
 		user.Role,
 		strconv.FormatUint(uint64(user.ID), 10),
 		jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(6 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			Issuer:    "code-mobi.com",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(h.signedString))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":  user,
+		"token": ss,
+	})
+}
+
+func (h *Handler) refreshTokenHandler(c *gin.Context) {
+	userClaim, _ := h.decodeToken(c)
+
+	var user models.User
+	if err := h.db.First(&user, userClaim.ID).Error; err != nil {
+		c.AbortWithStatus(http.StatusNotModified)
+		return
+	}
+
+	if user.ID == 0 {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	claims := &UserClaim{
+		user.Role,
+		strconv.FormatUint(uint64(user.ID), 10),
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 			Issuer:    "code-mobi.com",
 		},
 	}

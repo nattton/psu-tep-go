@@ -171,6 +171,16 @@ func (h *Handler) updateExamineeHandler(c *gin.Context) {
 }
 
 func (h *Handler) sendAnswerHandler(c *gin.Context) {
+	ansNumString := c.Param("ansNum")
+	ansNum, err := strconv.Atoi(ansNumString)
+	if err != nil || ansNum == 0 || ansNum > 3 {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+	file, err := c.FormFile("answer")
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
 	claims, _ := h.decodeToken(c)
 	if claims.Role != "examinee" {
 		c.JSON((http.StatusUnauthorized), gin.H{
@@ -179,37 +189,23 @@ func (h *Handler) sendAnswerHandler(c *gin.Context) {
 		return
 	}
 
-	println("ID", claims.ID)
-	println("Role", claims.Role)
 	var examinee models.Examinee
 	h.db.First(&examinee, claims.ID)
-
 	if err := os.MkdirAll(h.storePath+"/"+answerDir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
-	for i := 1; i < 4; i++ {
-		seq := fmt.Sprint(i)
-		file, err := c.FormFile("answer" + seq)
-		if err == nil {
-			filePath := fmt.Sprintf("/%s/%s_%s_%s_%s", answerDir, strconv.FormatUint(uint64(examinee.ID), 10), examinee.Code, seq, file.Filename)
-			if err := c.SaveUploadedFile(file, h.storePath+filePath); err != nil {
-				log.Fatal(err)
-			}
-
-			h.db.Model(&examinee).Update("answer"+seq, filePath)
-			if i == 3 {
-				h.db.Model(&examinee).Update("finish", true)
-			}
-
-			c.JSON(http.StatusCreated, gin.H{
-				"message": "save file",
-			})
-			return
-		} else {
-			println("answer" + seq + " not found")
-		}
+	filePath := fmt.Sprintf("/%s/%s_%s_%d_%s", answerDir, strconv.FormatUint(uint64(examinee.ID), 10), examinee.Code, ansNum, file.Filename)
+	if err := c.SaveUploadedFile(file, h.storePath+filePath); err != nil {
+		log.Fatal(err)
 	}
 
-	// c.AbortWithStatus(http.StatusNotModified)
+	h.db.Model(&examinee).Update("answer"+ansNumString, filePath)
+	if ansNum == 3 {
+		h.db.Model(&examinee).Update("finish", true)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "save answer number " + ansNumString,
+	})
 }

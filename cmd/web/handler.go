@@ -84,3 +84,11 @@ func (h *Handler) authorizationUserMiddleware(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 }
+
+func (h *Handler) authorizationExamineeMiddleware(c *gin.Context) {
+	h.authorizationMiddleware(c)
+	user, _ := h.decodeToken(c)
+	if user.Role != "examinee" {
+		c.AbortWithStatus(http.StatusUnauthorized)
+	}
+}
