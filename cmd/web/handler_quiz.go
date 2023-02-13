@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,45 +27,33 @@ func (h *Handler) getQuizHandler(c *gin.Context) {
 }
 
 func (h *Handler) saveQuizHandler(c *gin.Context) {
-	claims, _ := h.decodeToken(c)
-	if claims.Role != "admin" {
-		c.JSON((http.StatusUnauthorized), gin.H{
-			"error": claims.Role + " unauthorized this function.",
-		})
-		return
+	idString := c.Param("id")
+	id, err := strconv.Atoi(idString)
+	if err != nil || id == 0 || id > 3 {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+	file, err := c.FormFile("quiz")
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
-	println("ID", claims.ID)
-	println("Role", claims.Role)
 	var quiz models.Quiz
 	h.db.First(&quiz)
-
 	quizPath := fmt.Sprintf("/%s/", quizDir)
 	if err := os.MkdirAll(h.storePath+quizPath, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
-	for i := 1; i < 4; i++ {
-		seq := fmt.Sprint(i)
-		file, err := c.FormFile("quiz" + seq)
-		if err == nil {
-			filename := fmt.Sprintf("%s_%d_%s", seq, time.Now().Unix(), file.Filename)
-			if err := c.SaveUploadedFile(file, h.storePath+quizPath+filename); err != nil {
-				log.Fatal(err)
-			}
-
-			h.db.Model(&quiz).Update("quiz"+seq, quizPath+filename)
-
-			c.JSON(http.StatusOK, gin.H{
-				"message": "save file",
-			})
-			return
-		} else {
-			println("quiz" + seq + " not found")
-		}
+	filename := fmt.Sprintf("%d_%d_%s", id, time.Now().Unix(), file.Filename)
+	if err := c.SaveUploadedFile(file, h.storePath+quizPath+filename); err != nil {
+		log.Fatal(err)
 	}
 
-	c.AbortWithStatus(http.StatusNotModified)
+	h.db.Model(&quiz).Update("quiz"+idString, quizPath+filename)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "save file",
+	})
 }
 
 func (h *Handler) listExamineeByAdminHandler(c *gin.Context) {

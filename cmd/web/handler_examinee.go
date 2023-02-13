@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/xuri/excelize/v2"
 	"gitlab.com/code-mobi/psu-tep/pkg/forms"
 	"gitlab.com/code-mobi/psu-tep/pkg/models"
 )
@@ -112,6 +113,44 @@ func (h *Handler) getExamineeHandler(c *gin.Context) {
 	})
 }
 
+func (h *Handler) uploadExamineeHandler(c *gin.Context) {
+	file, err := c.FormFile("examinees")
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+	filePath := fmt.Sprintf("%s/temp/%s", h.storePath, file.Filename)
+	c.SaveUploadedFile(file, filePath)
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer func() {
+		// Close the spreadsheet.
+		if err := f.Close(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	// Get all the rows in the Sheet1.
+	rows, err := f.GetRows("Sheet1")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	count := 0
+	for _, row := range rows[1:] {
+		ex := models.Examinee{Code: row[0], Firstname: row[1], Lastname: row[2]}
+		result := h.db.Create(&ex)
+		if result.Error == nil {
+			count++
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Creat new %d examinee(s)", count),
+	})
+}
+
 func (h *Handler) createExamineeHandler(c *gin.Context) {
 	var form forms.Examinee
 	if err := c.ShouldBindJSON(&form); err != nil {
@@ -182,13 +221,6 @@ func (h *Handler) sendAnswerHandler(c *gin.Context) {
 	}
 
 	claims, _ := h.decodeToken(c)
-	if claims.Role != "examinee" {
-		c.JSON((http.StatusUnauthorized), gin.H{
-			"error": claims.Role + " unauthorized this function.",
-		})
-		return
-	}
-
 	var examinee models.Examinee
 	h.db.First(&examinee, claims.ID)
 	if err := os.MkdirAll(h.storePath+"/"+answerDir, os.ModePerm); err != nil {
