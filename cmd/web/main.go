@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	quizDir   = "quiz"
+	taskDir   = "task"
 	answerDir = "answer"
 )
 
@@ -28,7 +28,7 @@ func main() {
 	}
 	handler := newHandler(db, *signedString, *storePath)
 
-	db.AutoMigrate(&models.User{}, &models.Quiz{}, &models.Examinee{}, &models.Score{})
+	db.AutoMigrate(&models.User{}, &models.Task{}, &models.Examinee{}, &models.Score{})
 
 	handler.initUser()
 
@@ -44,7 +44,7 @@ func main() {
 	apiAdminProtected := r.Group("/api/admin", handler.authorizationMiddleware, handler.authorizationAdminMiddleware)
 	apiAdminProtected.GET("/users", handler.listUserHandler)
 	apiAdminProtected.PATCH("/user/:id", handler.updateUserHandler)
-	apiAdminProtected.PATCH("/quiz/:id", handler.saveQuizHandler)
+	apiAdminProtected.PATCH("/task/:id", handler.saveTaskHandler)
 	apiAdminProtected.GET("/examinee/:id", handler.getExamineeHandler)
 	apiAdminProtected.POST("/examinee", handler.createExamineeHandler)
 	apiAdminProtected.PATCH("/examinee/:id", handler.updateExamineeHandler)
@@ -53,6 +53,7 @@ func main() {
 	apiAdminProtected.GET("/examinees/scores", handler.listExamineeByAdminHandler)
 	apiAdminProtected.GET("/examinees/scores/download", handler.exportScores)
 	apiAdminProtected.GET("/examinees/answers/download", handler.downloadAnswers)
+	apiAdminProtected.POST("/clear_data", handler.clearDataHandler)
 
 	apiRaterProtected := r.Group("/api/rater", handler.authorizationMiddleware, handler.authorizationRaterMiddleware)
 	apiRaterProtected.GET("/examinees", handler.listExamineeByRaterHandler)
@@ -62,13 +63,13 @@ func main() {
 	apiUserProtected.GET("/refresh_token", handler.refreshTokenHandler)
 
 	apiProtected := r.Group("/api", handler.authorizationMiddleware)
-	apiProtected.GET("/quiz", handler.getQuizHandler)
+	apiProtected.GET("/task", handler.getTaskHandler)
 
 	apiExamineeProtected := r.Group("/api/examinee", handler.authorizationMiddleware, handler.authorizationExamineeMiddleware)
 	apiExamineeProtected.POST("answer/:ansNum", handler.sendAnswerHandler)
 
 	r.Static("/index", *frontPath)
-	r.Static("/"+quizDir, *storePath+"/"+quizDir)
+	r.Static("/"+taskDir, *storePath+"/"+taskDir)
 	r.Static("/"+answerDir, *storePath+"/"+answerDir)
 	r.Run(*addr)
 }

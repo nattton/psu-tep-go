@@ -26,10 +26,10 @@ func (h *Handler) initUser() {
 		rater2.Role = "rater"
 		h.db.Create(&rater2)
 
-		var exam models.Quiz
-		exam.Quiz1 = "/" + quizDir + "/RestaurantConversation.mp4"
-		exam.Quiz2 = "/" + quizDir + "/Clothes.mp4"
-		exam.Quiz3 = "/" + quizDir + "/DailyRoutines.mp4"
+		var exam models.Task
+		exam.Task1 = "/" + taskDir + "/RestaurantConversation.mp4"
+		exam.Task2 = "/" + taskDir + "/Clothes.mp4"
+		exam.Task3 = "/" + taskDir + "/DailyRoutines.mp4"
 		h.db.Create(&exam)
 
 		h.mockUpExaminee()

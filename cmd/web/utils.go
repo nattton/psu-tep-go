@@ -40,6 +40,7 @@ func zipAnswerWriter(storePath string) (string, error) {
 	return ZipFiles(storePath, zipFileName, files)
 
 }
+
 func ZipFiles(storeDir string, filename string, files []string) (string, error) {
 	fileDir := storeDir + "/temp"
 	filePath := fileDir + "/" + filename

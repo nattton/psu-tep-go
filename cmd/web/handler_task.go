@@ -15,41 +15,56 @@ import (
 	"gorm.io/gorm"
 )
 
-func (h *Handler) getQuizHandler(c *gin.Context) {
-	var quiz models.Quiz
-	h.db.First(&quiz)
+func (h *Handler) getTaskHandler(c *gin.Context) {
+	var task models.Task
+	h.db.First(&task)
 	currentPath := getCurrentPath(c)
+	task0, task1, task2, task3 := "", "", "", ""
+	if task.Task0 != "" {
+		task0 = currentPath + task.Task0
+	}
+	if task.Task1 != "" {
+		task1 = currentPath + task.Task1
+	}
+	if task.Task2 != "" {
+		task2 = currentPath + task.Task2
+	}
+	if task.Task3 != "" {
+		task3 = currentPath + task.Task3
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"quiz1": currentPath + quiz.Quiz1,
-		"quiz2": currentPath + quiz.Quiz2,
-		"quiz3": currentPath + quiz.Quiz3,
+		"task0": task0,
+		"task1": task1,
+		"task2": task2,
+		"task3": task3,
 	})
 }
 
-func (h *Handler) saveQuizHandler(c *gin.Context) {
+func (h *Handler) saveTaskHandler(c *gin.Context) {
 	idString := c.Param("id")
+	print("idString " + idString)
 	id, err := strconv.Atoi(idString)
-	if err != nil || id == 0 || id > 3 {
+	if err != nil || id < 0 || id > 3 {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
-	file, err := c.FormFile("quiz")
+	file, err := c.FormFile("task")
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
-	var quiz models.Quiz
-	h.db.First(&quiz)
-	quizPath := fmt.Sprintf("/%s/", quizDir)
-	if err := os.MkdirAll(h.storePath+quizPath, os.ModePerm); err != nil {
+	var task models.Task
+	h.db.First(&task)
+	taskPath := fmt.Sprintf("/%s/", taskDir)
+	if err := os.MkdirAll(h.storePath+taskPath, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
 	filename := fmt.Sprintf("%d_%d_%s", id, time.Now().Unix(), file.Filename)
-	if err := c.SaveUploadedFile(file, h.storePath+quizPath+filename); err != nil {
+	if err := c.SaveUploadedFile(file, h.storePath+taskPath+filename); err != nil {
 		log.Fatal(err)
 	}
 
-	h.db.Model(&quiz).Update("quiz"+idString, quizPath+filename)
+	h.db.Model(&task).Update("task"+idString, taskPath+filename)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "save file",
@@ -100,7 +115,8 @@ func (h *Handler) exportScores(c *gin.Context) {
 			fmt.Println(err)
 		}
 	}()
-	_, err := f.NewSheet("Sheet1")
+	sheetName := "Sheet1"
+	_, err := f.NewSheet(sheetName)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -111,22 +127,33 @@ func (h *Handler) exportScores(c *gin.Context) {
 		fmt.Println(err)
 		return
 	}
-	f.SetSheetRow("Sheet1", cell, &[]interface{}{"Code", "Firstname", "Lastname", "Rate by", "Answer1", "Answer2", "Answer3", "Total"})
+	f.SetSheetRow(sheetName, cell, &[]interface{}{"Test Taker ID", "Firstname", "Lastname", "Task1 / rater1", "Task1 / rater2", "Task2 / rater1", "Task2 / rater2", "Task3 / rater1", "Task3 / rater2"})
 
 	for _, ex := range examinees {
+		rowNum++
+		cell, _ := excelize.CoordinatesToCellName(1, rowNum)
+		f.SetSheetRow(sheetName, cell, &[]interface{}{ex.Code, ex.Firstname, ex.Lastname})
 		for _, score := range ex.Scores {
-			rowNum++
-			cell, err := excelize.CoordinatesToCellName(1, rowNum)
-			if err != nil {
-				fmt.Println(err)
-				return
+			if score.UserID == 2 {
+				cell, _ := excelize.CoordinatesToCellName(4, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task1), 2, 32)
+				cell, _ = excelize.CoordinatesToCellName(6, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task2), 2, 32)
+				cell, _ = excelize.CoordinatesToCellName(8, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task2), 2, 32)
+			} else if score.UserID == 3 {
+				cell, _ := excelize.CoordinatesToCellName(5, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task1), 2, 32)
+				cell, _ = excelize.CoordinatesToCellName(7, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task2), 2, 32)
+				cell, _ = excelize.CoordinatesToCellName(9, rowNum)
+				f.SetCellFloat(sheetName, cell, float64(score.Task3), 2, 32)
 			}
-			sumScore := score.Answer1 + score.Answer2 + score.Answer3
-			f.SetSheetRow("Sheet1", cell, &[]interface{}{ex.Code, ex.Firstname, ex.Lastname, score.User.Name, score.Answer1, score.Answer2, score.Answer3, sumScore})
 		}
 	}
-
-	filePath := fmt.Sprintf("%s/%s/Score.xlsx", h.storePath, quizDir)
+	fileDir := h.storePath + "/temp"
+	os.MkdirAll(fileDir, os.ModePerm)
+	filePath := fmt.Sprintf("%s/Score.xlsx", fileDir)
 	if err := f.SaveAs(filePath); err != nil {
 		fmt.Println(err)
 	}
@@ -180,9 +207,9 @@ func (h *Handler) rateExamineeHandler(c *gin.Context) {
 	result := h.db.Where("examinee_id = ? AND user_id = ?", examinee.ID, user.ID).First(&score)
 	score.ExamineeID = examinee.ID
 	score.UserID = user.ID
-	score.Answer1 = form.Answer1
-	score.Answer2 = form.Answer2
-	score.Answer3 = form.Answer3
+	score.Task1 = form.Task1
+	score.Task2 = form.Task2
+	score.Task3 = form.Task3
 	if result.Error == gorm.ErrRecordNotFound {
 		h.db.Create(&score)
 		c.JSON(http.StatusOK, gin.H{

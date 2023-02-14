@@ -216,7 +216,7 @@ func (h *Handler) updateExamineeHandler(c *gin.Context) {
 func (h *Handler) sendAnswerHandler(c *gin.Context) {
 	ansNumString := c.Param("ansNum")
 	ansNum, err := strconv.Atoi(ansNumString)
-	if err != nil || ansNum == 0 || ansNum > 3 {
+	if err != nil || ansNum < 0 || ansNum > 3 {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
 	file, err := c.FormFile("answer")

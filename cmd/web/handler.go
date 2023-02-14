@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
+	"gitlab.com/code-mobi/psu-tep/pkg/models"
 	"gorm.io/gorm"
 )
 
@@ -91,4 +94,33 @@ func (h *Handler) authorizationExamineeMiddleware(c *gin.Context) {
 	if user.Role != "examinee" {
 		c.AbortWithStatus(http.StatusUnauthorized)
 	}
+}
+
+func (h *Handler) clearDataHandler(c *gin.Context) {
+	err := h.db.Transaction(func(tx *gorm.DB) error {
+		tx.Exec("SET FOREIGN_KEY_CHECKS = 0;")
+		if err := tx.Exec("TRUNCATE examinees;").Error; err != nil {
+			return err
+		}
+		if err := tx.Exec("TRUNCATE scores;").Error; err != nil {
+			return err
+		}
+		tx.Exec("SET FOREIGN_KEY_CHECKS = 1;")
+		var task models.Task
+		tx.First(&task)
+		task.Task0 = ""
+		task.Task1 = ""
+		task.Task2 = ""
+		task.Task3 = ""
+		tx.Save(&task)
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}
+	os.RemoveAll(h.storePath + "/" + answerDir)
+	os.RemoveAll(h.storePath + "/" + taskDir)
+	os.RemoveAll(h.storePath + "/temp")
+	c.AbortWithStatus(http.StatusOK)
 }
