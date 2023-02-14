@@ -118,8 +118,12 @@ func (h *Handler) uploadExamineeHandler(c *gin.Context) {
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
-	filePath := fmt.Sprintf("%s/temp/%s", h.storePath, file.Filename)
-	c.SaveUploadedFile(file, filePath)
+	fileDir := h.storePath + "/temp"
+	filePath := fileDir + "/" + file.Filename
+	os.MkdirAll(fileDir, os.ModePerm)
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		log.Fatal(err)
+	}
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
 		fmt.Println(err)
