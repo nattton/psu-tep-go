@@ -74,8 +74,11 @@ func (h *Handler) listExamineeHandler(c *gin.Context) {
 }
 
 func addPathToAnswer(c *gin.Context, ex models.Examinee) models.Examinee {
-	ans1, ans2, ans3 := "", "", ""
+	ans0, ans1, ans2, ans3 := "", "", "", ""
 	currentPath := getCurrentPath(c)
+	if ex.Answer0 != "" {
+		ans0 = currentPath + ex.Answer0
+	}
 	if ex.Answer1 != "" {
 		ans1 = currentPath + ex.Answer1
 	}
@@ -91,6 +94,7 @@ func addPathToAnswer(c *gin.Context, ex models.Examinee) models.Examinee {
 		Code:      ex.Code,
 		Firstname: ex.Firstname,
 		Lastname:  ex.Lastname,
+		Answer0:   ans0,
 		Answer1:   ans1,
 		Answer2:   ans2,
 		Answer3:   ans3,
